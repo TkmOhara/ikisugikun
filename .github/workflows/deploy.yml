@@ -23,7 +23,7 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_SSH_PORT }}
           script: |
-            cd /path/to/your/project
+            cd /home/oharat/project/ikisugikun
             git pull origin main
 
             docker compose build
