@@ -1,0 +1,4 @@
+__pycache__
+audio_files
+audio.db
+.env

@@ -1,0 +1,8 @@
+services:
+  ikisugikun:
+    build: .
+    container_name: ikisugikun
+    volumes:
+      - ./src:/home/ikisugikun
+    restart: always
+    tty: true
