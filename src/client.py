@@ -138,6 +138,8 @@ async def on_message(message):
                     await message.channel.send('削除が完了しました:' + args[1])
                 else:
                     await message.channel.send('ファイルが見つかりません')
+    elif message.content.startswith('!yarimasune'):
+        await message.channel.send('やりますねぇ！')
 
 def audio_register(name, filepath):
     DB = db()
