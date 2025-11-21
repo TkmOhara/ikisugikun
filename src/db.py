@@ -1,12 +1,11 @@
 import sqlite3
-import json
-
-settings_json = open('/home/ikisugikun/settings.json', 'r')
-settings = json.load(settings_json)
+from pathlib import Path
 
 class db():
 	def __init__(self):
-		dbname = settings['currentDirectory'] + '/audio.db'
+		# プロジェクトの `src` ディレクトリを基準にデータベースを置く
+		base_dir = Path(__file__).resolve().parent
+		dbname = str(base_dir / 'audio.db')
 		self.conn = sqlite3.connect(dbname)
 		self.cur = self.conn.cursor()
 		self.cur.execute(

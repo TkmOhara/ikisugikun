@@ -13,8 +13,8 @@ import os
 load_dotenv()
 api_key = os.getenv("TOKEN")
 
-settings_json = open('/home/ikisugikun/settings.json', 'r')
-settings = json.load(settings_json)
+# プロジェクトの `src` ディレクトリを基準にファイルを扱う
+base_dir = Path(__file__).resolve().parent
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -79,7 +79,7 @@ async def play_audio(interaction: discord.Interaction, audio_file: str):
     if voice_client.is_playing():
         voice_client.stop()
     
-    source = discord.FFmpegPCMAudio(settings['currentDirectory'] + '/audio_files/' + audio_file)
+    source = discord.FFmpegPCMAudio(str(base_dir / 'audio_files' / audio_file))
     voice_client.play(source)
 
 @bot.listen()
@@ -115,7 +115,8 @@ async def on_message(message):
             await message.channel.send('ファイルの拡張子が不正です')
             return
         else:
-            await message.attachments[0].save(fp="/home/ikisugikun/audio_files/{}".format(filename))
+            # 添付ファイルをプロジェクト内の audio_files に保存
+            await message.attachments[0].save(fp=str(base_dir / 'audio_files' / filename))
             audio_register(args[1], filename)
             await message.channel.send('登録が完了しました:' + args[1] + ' ' + filename)
     elif message.content.startswith('!rm'):
@@ -130,7 +131,7 @@ async def on_message(message):
                 await message.channel.send('その名前の登録はありません')
                 return
             else:
-                file_path = Path('/home/ikisugikun/audio_files/' + record[0][2])
+                file_path = Path(base_dir / 'audio_files' / record[0][2])
                 if file_path.exists():
                     file_path.unlink()
                     DB.delete_record_by_id(record[0][0])
