@@ -25,7 +25,8 @@ class MyView(View):
     def __init__(self, list):
         super().__init__()
         for obj in list:
-            print(obj)
+            # obj[1]がint型の場合エラーになるので対策
+            obj = obj[0], str(obj[1]), obj[2]
             custom_emoji = r'<:[a-zA-Z0-9_]+:[0-9]+>'
             
             if re.fullmatch(custom_emoji, obj[1]) == None:
