@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 from dotenv import load_dotenv
 import os
+import yt_dlp
 
 load_dotenv()
 api_key = os.getenv("TOKEN")
@@ -145,6 +146,42 @@ async def on_message(message):
 def audio_register(name, filepath):
     DB = db()
     DB.insert_record(name, filepath)
+
+
+@bot.command()
+async def youtube(ctx, url):
+    # VCに未接続なら接続
+    if ctx.author.voice is None:
+        return await ctx.send("ボイスチャンネルに入ってください")
+
+    if ctx.voice_client is None:
+        await ctx.author.voice.channel.connect()
+
+    vc = ctx.voice_client
+
+    # すでに再生中なら停止
+    if vc.is_playing():
+        vc.stop()
+
+    # YouTube → 音源URL を取得
+    ydl_opts = {
+        "format": "bestaudio/best",
+        "quiet": True,
+        "no_warnings": True,
+    }
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+        audio_url = info["url"]  # FFmpeg がストリーミング再生するURL
+
+    source = discord.FFmpegPCMAudio(
+        audio_url,
+        before_options='-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
+        options='-vn'
+    )
+
+    vc.play(source)
+    await ctx.send(f"▶ 再生開始: {info.get('title', 'YouTube')}")
 
 
 bot.run(api_key)
