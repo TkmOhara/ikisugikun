@@ -20,7 +20,7 @@ base_dir = Path(__file__).resolve().parent
 intents = discord.Intents.default()
 intents.message_content = True
 client = discord.Client(intents=intents)
-bot = commands.Bot(command_prefix="!", intents=intents)
+bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
 class MyView(View):
     def __init__(self, list):
@@ -34,7 +34,6 @@ class MyView(View):
                 self.add_item(Button(label=obj[1], style=discord.ButtonStyle.secondary, custom_id=str(obj[0])))
             else:
                 self.add_item(Button(emoji=obj[1], style=discord.ButtonStyle.secondary, custom_id=str(obj[0])))
-
 
 @bot.event
 async def on_ready():
@@ -121,7 +120,7 @@ async def on_message(message):
             await message.attachments[0].save(fp=str(base_dir / 'audio_files' / filename))
             audio_register(args[1], filename)
             await message.channel.send('登録が完了しました:' + args[1] + ' ' + filename)
-    elif message.content.startswith('!rm'):
+    elif message.content.startswith('!remove'):
         args = message.content.split(' ')
         if len(args) != 2:
             await message.channel.send('引数が不正です')
@@ -183,5 +182,20 @@ async def youtube(ctx, url):
     vc.play(source)
     await ctx.send(f"▶ 再生開始: {info.get('title', 'YouTube')}")
 
+@bot.command()
+async def help(ctx):
+    embed = discord.Embed(
+        title="📘 Help",
+        description="使用できるコマンド一覧です。",
+        color=discord.Color.blue()
+    )
+
+    embed.add_field(name="!regist <NAME>", value="ファイルを添付して音声を登録します", inline=False)
+    embed.add_field(name="!remove <NAME>", value="音声を削除します", inline=False)
+    embed.add_field(name="!list", value="音声一覧を表示します", inline=False)
+    embed.add_field(name="!youtube <URL>", value="youtubeの音声を再生します", inline=False)
+    embed.add_field(name="!yarimasune", value="やりますねぇ！", inline=False)
+
+    await ctx.send(embed=embed)
 
 bot.run(api_key)
