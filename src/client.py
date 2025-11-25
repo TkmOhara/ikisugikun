@@ -19,6 +19,7 @@ base_dir = Path(__file__).resolve().parent
 
 intents = discord.Intents.default()
 intents.message_content = True
+intents.voice_states = True
 client = discord.Client(intents=intents)
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
@@ -181,6 +182,31 @@ async def youtube(ctx, url):
 
     vc.play(source)
     await ctx.send(f"▶ 再生開始: {info.get('title', 'YouTube')}")
+
+
+@bot.event
+async def on_voice_state_update(member, before, after):
+    # ボイスチャンネルから離脱したイベントだけを見る
+    if before.channel is not None and (after.channel != before.channel):
+        channel = before.channel
+
+        # このチャンネルに bot がいるか？
+        if channel.guild.voice_client is None:
+            return
+
+        bot_voice = channel.guild.voice_client
+
+        # Bot が現在いるチャンネルと一致しているか？
+        if bot_voice.channel != channel:
+            return
+
+        # 残っているメンバーに人間がいるかチェック
+        humans = [m for m in channel.members if not m.bot]
+
+        if len(humans) == 0:
+            await bot_voice.disconnect()
+            print("🔊 誰もいなくなったので BOT は退出しました。")
+
 
 @bot.command()
 async def help(ctx):
