@@ -45,15 +45,18 @@ async def on_ready():
 @bot.event
 async def on_interaction(interaction: discord.Interaction):
     custom_id = interaction.data['custom_id']
+    channel_id = str(interaction.channel.id)
     DB = db()
     data = DB.get_record_by_id(custom_id)[0]
-    await play_audio(interaction, data[2])
+    await play_audio(interaction, data[2], channel_id)
 
 @bot.command()
 async def list(ctx):
+    channel_id = str(ctx.channel.id)
     DB = db()
     all_record = DB.get_all_record()
-    blocks = chunk_list(all_record, 25)
+    filter_record = [t for t in all_record if str(t[3]) == channel_id]
+    blocks = chunk_list(filter_record, 25)
     for block in blocks:
         view = MyView(block)
         await ctx.send(view=view)
@@ -61,7 +64,7 @@ async def list(ctx):
 def chunk_list(lst, chunk_size):
     return [lst[i:i + chunk_size] for i in range(0, len(lst), chunk_size)]
     
-async def play_audio(interaction: discord.Interaction, audio_file: str):
+async def play_audio(interaction: discord.Interaction, audio_file: str, channel_id: str):
     await interaction.response.defer()
     # ユーザーが音声チャネルに接続しているか確認
     if interaction.user.voice is None:
@@ -81,11 +84,12 @@ async def play_audio(interaction: discord.Interaction, audio_file: str):
     if voice_client.is_playing():
         voice_client.stop()
     
-    source = discord.FFmpegPCMAudio(str(base_dir / 'audio_files' / audio_file))
+    source = discord.FFmpegPCMAudio(f"{base_dir}/audio_files/{channel_id}/{audio_file}")
     voice_client.play(source)
 
 @bot.listen()
 async def on_message(message):
+    channel_id = str(message.channel.id)
 
     if message.content.startswith('!regist'):
         extensions = ['wav', 'mp3']
@@ -104,7 +108,8 @@ async def on_message(message):
         split_v1 = str(message.attachments).split("filename='")[1]
         filename = str(split_v1).split("' ")[0]
         DB = db()
-        duplication = DB.get_record_by_name(args[1])
+        all_record = DB.get_record_by_name(args[1])
+        duplication = [t for t in all_record if str(t[3]) == channel_id]
 
         if custom_emoji2 == None and len(args[1]) > 5:
             await message.channel.send('登録名称が長すぎます')
@@ -117,9 +122,13 @@ async def on_message(message):
             await message.channel.send('ファイルの拡張子が不正です')
             return
         else:
+            # フォルダが無ければ作成
+            dir = f"{base_dir}/audio_files/{channel_id}"
+            Path(dir).mkdir(parents=True, exist_ok=True)
+
             # 添付ファイルをプロジェクト内の audio_files に保存
-            await message.attachments[0].save(fp=str(base_dir / 'audio_files' / filename))
-            audio_register(args[1], filename)
+            await message.attachments[0].save(fp=f"{dir}/{filename}")
+            audio_register(args[1], filename, channel_id)
             await message.channel.send('登録が完了しました:' + args[1] + ' ' + filename)
     elif message.content.startswith('!remove'):
         args = message.content.split(' ')
@@ -133,7 +142,7 @@ async def on_message(message):
                 await message.channel.send('その名前の登録はありません')
                 return
             else:
-                file_path = Path(base_dir / 'audio_files' / record[0][2])
+                file_path = Path(f"{base_dir}/audio_files/{record[0][3]}/{record[0][2]}")
                 if file_path.exists():
                     file_path.unlink()
                     DB.delete_record_by_id(record[0][0])
@@ -143,9 +152,9 @@ async def on_message(message):
     elif message.content.startswith('!yarimasune'):
         await message.channel.send('やりますねぇ！')
 
-def audio_register(name, filepath):
+def audio_register(name, filepath, channel_id):
     DB = db()
-    DB.insert_record(name, filepath)
+    DB.insert_record(name, filepath, channel_id)
 
 
 @bot.command()

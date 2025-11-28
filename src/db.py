@@ -9,14 +9,14 @@ class db():
 		self.conn = sqlite3.connect(dbname)
 		self.cur = self.conn.cursor()
 		self.cur.execute(
-			'CREATE TABLE IF NOT EXISTS files(id INTEGER PRIMARY KEY AUTOINCREMENT, name STRING, filepath STRING)'
+			'CREATE TABLE IF NOT EXISTS files(id INTEGER PRIMARY KEY AUTOINCREMENT, name STRING, filepath STRING, channel_id STRING)'
 		)
 		self.conn.commit()
 	
-	def insert_record(self, name, filepath):
-		data = [name, filepath]
+	def insert_record(self, name, filepath, channel_id):
+		data = [name, filepath, channel_id]
 
-		self.cur.execute('INSERT INTO files (name, filepath) VALUES (?, ?)', data)
+		self.cur.execute('INSERT INTO files (name, filepath, channel_id) VALUES (?, ?, ?)', data)
 		self.conn.commit()
 
 	def get_all_record(self):
