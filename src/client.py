@@ -10,9 +10,17 @@ from pathlib import Path
 from dotenv import load_dotenv
 import os
 import yt_dlp
+from google import genai
 
 load_dotenv()
 api_key = os.getenv("TOKEN")
+gemini_api_key = os.getenv("GEMINI_API_KEY")
+
+if gemini_api_key:
+    gemini_client = genai.Client(api_key=gemini_api_key)
+else:
+    gemini_client = None
+    print("Warning: GEMINI_API_KEY is not set.")
 
 # プロジェクトの `src` ディレクトリを基準にファイルを扱う
 base_dir = Path(__file__).resolve().parent
@@ -89,7 +97,35 @@ async def play_audio(interaction: discord.Interaction, audio_file: str, guild_id
 
 @bot.listen()
 async def on_message(message):
+    if message.author.bot:
+        return
+        
     guild_id = str(message.guild.id)
+
+    if bot.user in message.mentions and gemini_client:
+        async with message.channel.typing():
+            try:
+                # メンションを削除してコンテンツを取得
+                prompt = message.content.replace(f'<@{bot.user.id}>', '').strip()
+                if not prompt:
+                    prompt = "こんにちは" # デフォルトメッセージ
+
+                response = gemini_client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=prompt
+                )
+                response_text = response.text
+                # Discordの文字数制限（2000文字）に対応するため分割して送信
+                if len(response_text) > 2000:
+                    for i in range(0, len(response_text), 2000):
+                        chunk = response_text[i:i+2000]
+                        await message.reply(chunk)
+                else:
+                    await message.reply(response_text)
+            except Exception as e:
+                print(f"Gemini API Error: {e}")
+                await message.channel.send("申し訳ありません。エラーが発生しました。")
+        return
 
     if message.content.startswith('!regist'):
         extensions = ['wav', 'mp3']
