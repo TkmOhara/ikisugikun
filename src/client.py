@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 import os
 import yt_dlp
 from google import genai
+from google.genai import types
 
 load_dotenv()
 api_key = os.getenv("TOKEN")
@@ -112,7 +113,10 @@ async def on_message(message):
 
                 response = gemini_client.models.generate_content(
                     model='gemini-2.5-flash',
-                    contents=prompt
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        system_instruction="必ず淫夢語録で回答してください"
+                    )
                 )
                 response_text = response.text
                 # Discordの文字数制限（2000文字）に対応するため分割して送信
