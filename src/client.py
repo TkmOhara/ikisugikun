@@ -198,7 +198,7 @@ def audio_register(name, filepath, guild_id):
 
 
 @bot.command()
-async def youtube(ctx, url):
+async def play(ctx, url):
     # VCに未接続なら接続
     if ctx.author.voice is None:
         return await ctx.send("ボイスチャンネルに入ってください")
@@ -212,16 +212,19 @@ async def youtube(ctx, url):
     if vc.is_playing():
         vc.stop()
 
-    # YouTube → 音源URL を取得
+    # YouTube / ニコニコ動画 → 音源URL を取得
     ydl_opts = {
         "format": "bestaudio/best",
         "quiet": True,
         "no_warnings": True,
     }
 
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=False)
-        audio_url = info["url"]  # FFmpeg がストリーミング再生するURL
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            audio_url = info["url"]
+    except Exception as e:
+        return await ctx.send(f"❌ 動画の取得に失敗しました: {e}")
 
     source = discord.FFmpegPCMAudio(
         audio_url,
@@ -229,8 +232,12 @@ async def youtube(ctx, url):
         options='-vn'
     )
 
+    # サービス名を取得（YouTube, niconico など）
+    extractor = info.get('extractor', '').replace(':', ' ').title()
+    title = info.get('title', '不明')
+
     vc.play(source)
-    await ctx.send(f"▶ 再生開始: {info.get('title', 'YouTube')}")
+    await ctx.send(f"▶ 再生開始 [{extractor}]: {title}")
 
 
 @bot.event
@@ -268,7 +275,7 @@ async def help(ctx):
     embed.add_field(name="!regist <NAME>", value="ファイルを添付して音声を登録します", inline=False)
     embed.add_field(name="!remove <NAME>", value="音声を削除します", inline=False)
     embed.add_field(name="!list", value="音声一覧を表示します", inline=False)
-    embed.add_field(name="!youtube <URL>", value="youtubeの音声を再生します", inline=False)
+    embed.add_field(name="!play <URL>", value="YouTube / ニコニコ動画の音声を再生します", inline=False)
     embed.add_field(name="!yarimasune", value="やりますねぇ！", inline=False)
 
     await ctx.send(embed=embed)
