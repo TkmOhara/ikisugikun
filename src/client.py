@@ -222,13 +222,34 @@ async def play(ctx, url):
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
-            audio_url = info["url"]
+
+            # URLの取得方法はサービスによって異なる
+            audio_url = info.get("url")
+            if not audio_url:
+                # ニコニコ動画などはformatsから取得する必要がある
+                formats = info.get("formats", [])
+                if formats:
+                    # 音声のみのフォーマットを優先、なければ最後のフォーマット
+                    audio_formats = [f for f in formats if f.get("acodec") != "none" and f.get("vcodec") == "none"]
+                    if audio_formats:
+                        audio_url = audio_formats[-1]["url"]
+                    else:
+                        audio_url = formats[-1]["url"]
+
+            if not audio_url:
+                return await ctx.send("❌ 音声URLを取得できませんでした")
+
     except Exception as e:
         return await ctx.send(f"❌ 動画の取得に失敗しました: {e}")
 
+    # ニコニコ動画(HLS)対応のFFmpegオプション
+    before_opts = '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5'
+    if '.m3u8' in audio_url or 'nicovideo' in url:
+        before_opts = '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -protocol_whitelist file,http,https,tcp,tls,crypto'
+
     source = discord.FFmpegPCMAudio(
         audio_url,
-        before_options='-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
+        before_options=before_opts,
         options='-vn'
     )
 
